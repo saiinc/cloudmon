@@ -12,16 +12,22 @@ LOG_PATH = os.environ['LOG_PATH']
 TELEGRAM_TOKEN = os.environ['TELEGRAM_TOKEN']
 TLG_CHAT_ID = os.environ['TLG_CHAT_ID']
 PASSPHRASE = os.environ['PASSPHRASE']
+GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
 
 app = Flask(__name__)
-g = Github("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")
+g = Github(GITHUB_TOKEN)
+repo = g.get_repo("cloudmon1/cloudmon")
 
 
 def get_nodes():
-    nodes = (('node_test', False),)
+    nodes = (('node_test',),)
     list_nodes = []
     for row in range(len(nodes)):
-        dict_node = {'node_name': nodes[row][0], 'alert': False, 'passphrase': PASSPHRASE,
+        node = nodes[row][0]
+        #print(repo.create_file("state/test.txt", "testing", "test", branch="nodb"))
+        contents = repo.get_contents("state", ref="nodb")
+        print(contents)
+        dict_node = {'node_name': node, 'alert': False,
                      'ok_msg': False, 'time': datetime.now()}
         list_nodes.append(dict_node)
     return list_nodes
@@ -29,8 +35,9 @@ def get_nodes():
 
 dblog = []
 nodelist = get_nodes()
-repo = g.get_repo("cloudmon1/cloudmon")
-print(repo.create_file("test.txt", "testing", "test", branch="nodb"))
+#repo = g.get_repo("cloudmon1/cloudmon")
+statedir = "state/"
+#print(repo.create_file(statedir + "test.txt", "testing", "test", branch="nodb"))
 
 
 def worker():
@@ -47,7 +54,7 @@ def worker():
 
 
 def state_checker(message, index):
-    if datetime.now() - message.get('time') > timedelta(minutes=3):
+    if datetime.now() - message.get('time') > timedelta(minutes=4):
         if message.get('alert') is False:
             message.update({'alert': True})
             print(' '.join(["Status Alert:", str(datetime.now() - message.get('time'))]))
