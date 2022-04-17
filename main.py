@@ -4,6 +4,7 @@ import requests
 from flask import Flask, request
 from apscheduler.schedulers.background import BackgroundScheduler
 from github import Github
+import csv
 
 
 SND_PATH = os.environ['SND_PATH']
@@ -20,16 +21,31 @@ repo = g.get_repo("cloudmon1/cloudmon")
 
 
 def get_nodes():
-    nodes = (('node_test',),)
+    # print(repo.create_file("state/test.txt", "testing", "test", branch="nodb"))
+    contents = repo.get_contents(path='temp.db')
+    filedb = contents.decoded_content
+    f = open('temp.db', 'wb')
+    f.write(filedb)
+    f.close()
+    with open('temp.db', newline='') as f:
+        reader = csv.reader(f)
+        data = list(reader)
+    print(data)
+    nodes = ('node_test',)
+    filenodes = []
+    for row in range(len(data)):
+        filenode = data[row][0]
+        filenodes.append(filenode)
+    print(filenodes)
+    to_delete = list(set(filenodes) - set(nodes))
+    print(to_delete)
     list_nodes = []
     for row in range(len(nodes)):
-        node = nodes[row][0]
-        #print(repo.create_file("state/test.txt", "testing", "test", branch="nodb"))
-        contents = repo.get_contents(path='')
-        print(contents)
+        node = nodes[row]
         dict_node = {'node_name': node, 'alert': False,
                      'ok_msg': False, 'time': datetime.now()}
         list_nodes.append(dict_node)
+    print(list_nodes)
     return list_nodes
 
 
