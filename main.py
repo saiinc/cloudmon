@@ -25,7 +25,7 @@ def get_nodes():
     for row in range(len(nodes)):
         node = nodes[row][0]
         #print(repo.create_file("state/test.txt", "testing", "test", branch="nodb"))
-        contents = repo.get_contents("state", ref="nodb")
+        contents = repo.get_contents(path='')
         print(contents)
         dict_node = {'node_name': node, 'alert': False,
                      'ok_msg': False, 'time': datetime.now()}
