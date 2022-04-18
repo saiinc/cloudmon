@@ -27,25 +27,38 @@ def get_nodes():
     f = open('temp.db', 'wb')
     f.write(filedb)
     f.close()
-    with open('temp.db', newline='') as f:
-        reader = csv.reader(f)
-        data = list(reader)
-    print(data)
-    nodes = ('node_test',)
-    filenodes = []
-    for row in range(len(data)):
-        filenode = data[row][0]
-        filenodes.append(filenode)
-    print(filenodes)
-    to_delete = list(set(filenodes) - set(nodes))
-    print(to_delete)
+    nodes = ('node_test1', 'home_test', 'home_test1')
     list_nodes = []
-    for row in range(len(nodes)):
-        node = nodes[row]
-        dict_node = {'node_name': node, 'alert': False,
-                     'ok_msg': False, 'time': datetime.now()}
-        list_nodes.append(dict_node)
+    list_csvnodenames = []
+    list_csvnodes = []
+    with open('names.csv', newline='') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            list_csvnodenames.append(row[0])
+            list_csvnodes.append(row)
+    print(list_csvnodenames)
+    to_delete = list(set(list_csvnodenames) - set(nodes))
+    print(to_delete)
+    csvnodes_creared = list(list_csvnodes)
+    for row in list_csvnodes:
+        if row[0] in to_delete:
+            csvnodes_creared.remove(row)
+    print(csvnodes_creared)
+    for row in csvnodes_creared:
+        dict_csvnode = {'node_name': row[0], 'alert': row[1], 'time': datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f")}
+        list_nodes.append(dict_csvnode)
+    for row in nodes:
+        result = next((x for x in list_nodes if x['node_name'] == row), None)
+        if result is None:
+            dict_node = {'node_name': row, 'alert': False, 'time': datetime.now()}
+            list_nodes.append(dict_node)
     print(list_nodes)
+    """with open('names.csv', 'w', newline='') as csvfile:
+        fieldnames = ['node_name', 'alert', 'time']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in list_nodes:
+            writer.writerow(item)"""
     return list_nodes
 
 
@@ -80,7 +93,7 @@ def state_checker(message, index):
         else:
             return print(' '.join(['Status ' + message.get('node_name') + ' is Alert:', str(datetime.now() - message.get('time'))]))
     else:
-        if message.get('ok_msg') is True and message.get('alert') is True:
+        if message.get('alert') is True:
             message.update({'alert': False})
             #execute_query(connection, update_post_zbx_mon_ok + str(index + 1))
             print(''.join(["Alive message send to Telegram ", sender_tlg(index, False)]))
@@ -133,7 +146,6 @@ def receive_msg():
     data = request.json  # JSON -> dict
     index = next((i for i, item in enumerate(nodelist) if item['node_name'] == data['username']), None)
     if index is not None and data['text'] == 'all_ok' and data['password'] == PASSPHRASE:
-        nodelist[index]['ok_msg'] = True
         nodelist[index]['time'] = datetime.now()
         return {"ok": True}
     else:
