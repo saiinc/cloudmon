@@ -20,8 +20,15 @@ g = Github(GITHUB_TOKEN)
 repo = g.get_repo("cloudmon1/cloudmon")
 
 
+def save_to_csv(list_nodes):
+    with open('names.csv', 'w', newline='') as csvfile:
+        fieldnames = ['node_name', 'alert', 'time']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        for item in list_nodes:
+            writer.writerow(item)
+
+
 def get_nodes():
-    # print(repo.create_file("state/test.txt", "testing", "test", branch="nodb"))
     contents = repo.get_contents(path='temp.db')
     filedb = contents.decoded_content
     f = open('temp.db', 'wb')
@@ -39,12 +46,12 @@ def get_nodes():
     print(list_csvnodenames)
     to_delete = list(set(list_csvnodenames) - set(nodes))
     print(to_delete)
-    csvnodes_creared = list(list_csvnodes)
+    csvnodes_cleared = list(list_csvnodes)
     for row in list_csvnodes:
         if row[0] in to_delete:
-            csvnodes_creared.remove(row)
-    print(csvnodes_creared)
-    for row in csvnodes_creared:
+            csvnodes_cleared.remove(row)
+    print(csvnodes_cleared)
+    for row in csvnodes_cleared:
         dict_csvnode = {'node_name': row[0], 'alert': row[1], 'time': datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f")}
         list_nodes.append(dict_csvnode)
     for row in nodes:
@@ -53,12 +60,10 @@ def get_nodes():
             dict_node = {'node_name': row, 'alert': False, 'time': datetime.now()}
             list_nodes.append(dict_node)
     print(list_nodes)
-    """with open('names.csv', 'w', newline='') as csvfile:
-        fieldnames = ['node_name', 'alert', 'time']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for item in list_nodes:
-            writer.writerow(item)"""
+    save_to_csv(list_nodes)
+    with open('names.csv', 'r') as file:
+        content = file.read()
+    print(repo.update_file("temp.db", "list_nodes_test", content, contents.sha))
     return list_nodes
 
 
@@ -87,7 +92,7 @@ def state_checker(message, index):
         if message.get('alert') is False:
             message.update({'alert': True})
             print(' '.join(["Status Alert:", str(datetime.now() - message.get('time'))]))
-            #execute_query(connection, update_post_zbx_mon_alert + str(index + 1))
+            save_to_csv(nodelist)
             print(''.join(["Alert message send to Telegram ", sender_tlg(index, True)]))
             return print('Status ' + message.get('node_name') + ' switched to Alert')
         else:
@@ -95,7 +100,7 @@ def state_checker(message, index):
     else:
         if message.get('alert') is True:
             message.update({'alert': False})
-            #execute_query(connection, update_post_zbx_mon_ok + str(index + 1))
+            save_to_csv(nodelist)
             print(''.join(["Alive message send to Telegram ", sender_tlg(index, False)]))
             return print('Status ' + message.get('node_name') + ' switched to OK')
         else:
