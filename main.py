@@ -18,10 +18,11 @@ GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
 app = Flask(__name__)
 g = Github(GITHUB_TOKEN)
 repo = g.get_repo("cloudmon1/cloudmon")
+git_file = 'temp.db'
 
 
-def save_to_csv(list_nodes):
-    with open('names.csv', 'w', newline='') as csvfile:
+def save_to_csv(list_nodes, filename):
+    with open(filename, 'w', newline='') as csvfile:
         fieldnames = ['node_name', 'alert', 'time']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         for item in list_nodes:
@@ -29,20 +30,30 @@ def save_to_csv(list_nodes):
 
 
 def get_nodes():
-    contents = repo.get_contents(path='temp.db')
-    filedb = contents.decoded_content
-    f = open('temp.db', 'wb')
-    f.write(filedb)
-    f.close()
     nodes = ('node_test1', 'home_test', 'home_test1')
     list_nodes = []
     list_csvnodenames = []
     list_csvnodes = []
-    with open('names.csv', newline='') as csvfile:
-        reader = csv.reader(csvfile)
-        for row in reader:
-            list_csvnodenames.append(row[0])
-            list_csvnodes.append(row)
+    all_repo_files = []
+    contents = repo.get_contents("")
+    while contents:
+        file_content = contents.pop(0)
+        if file_content.type == "dir":
+            contents.extend(repo.get_contents(file_content.path))
+        else:
+            file = file_content
+            all_repo_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
+    if git_file in all_repo_files:
+        content = repo.get_contents(path=git_file)
+        filedb = content.decoded_content
+        f = open(git_file, 'wb')
+        f.write(filedb)
+        f.close()
+        with open(git_file, newline='') as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                list_csvnodenames.append(row[0])
+                list_csvnodes.append(row)
     print(list_csvnodenames)
     to_delete = list(set(list_csvnodenames) - set(nodes))
     print(to_delete)
@@ -60,18 +71,20 @@ def get_nodes():
             dict_node = {'node_name': row, 'alert': False, 'time': datetime.now()}
             list_nodes.append(dict_node)
     print(list_nodes)
-    save_to_csv(list_nodes)
-    with open('names.csv', 'r') as file:
-        content = file.read()
-    print(repo.update_file("temp.db", "list_nodes_test", content, contents.sha))
+    save_to_csv(list_nodes, git_file)
+    with open(git_file, 'r') as file:
+        content_to_upload = file.read()
+    if git_file in all_repo_files:
+        contents = repo.get_contents(git_file)
+        print(repo.update_file(git_file, "committing files", content_to_upload, contents.sha))
+    else:
+        repo.create_file(git_file, "committing files", content_to_upload, branch="master")
+        print(git_file + ' CREATED')
     return list_nodes
 
 
 dblog = []
 nodelist = get_nodes()
-#repo = g.get_repo("cloudmon1/cloudmon")
-statedir = "state/"
-#print(repo.create_file(statedir + "test.txt", "testing", "test", branch="nodb"))
 
 
 def worker():
@@ -92,7 +105,7 @@ def state_checker(message, index):
         if message.get('alert') is False:
             message.update({'alert': True})
             print(' '.join(["Status Alert:", str(datetime.now() - message.get('time'))]))
-            save_to_csv(nodelist)
+            save_to_csv(nodelist, git_file)
             print(''.join(["Alert message send to Telegram ", sender_tlg(index, True)]))
             return print('Status ' + message.get('node_name') + ' switched to Alert')
         else:
@@ -100,7 +113,7 @@ def state_checker(message, index):
     else:
         if message.get('alert') is True:
             message.update({'alert': False})
-            save_to_csv(nodelist)
+            save_to_csv(nodelist, git_file)
             print(''.join(["Alive message send to Telegram ", sender_tlg(index, False)]))
             return print('Status ' + message.get('node_name') + ' switched to OK')
         else:
