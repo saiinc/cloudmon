@@ -29,8 +29,28 @@ def save_to_csv(list_nodes, filename):
             writer.writerow(item)
 
 
+def upload_to_github():
+    all_repo_files = []
+    contents = repo.get_contents("")
+    while contents:
+        file_content = contents.pop(0)
+        if file_content.type == "dir":
+            contents.extend(repo.get_contents(file_content.path))
+        else:
+            file = file_content
+            all_repo_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
+    with open(git_file, 'r') as file:
+        content_to_upload = file.read()
+    if git_file in all_repo_files:
+        contents = repo.get_contents(git_file)
+        print(repo.update_file(git_file, "committing files", content_to_upload, contents.sha))
+    else:
+        repo.create_file(git_file, "committing files", content_to_upload, branch="master")
+        print(git_file + ' CREATED')
+
+
 def get_nodes():
-    nodes = ('node_test1', 'home_test', 'home_test1')
+    nodes = ('node_test',)
     list_nodes = []
     list_csvnodenames = []
     list_csvnodes = []
@@ -63,7 +83,7 @@ def get_nodes():
             csvnodes_cleared.remove(row)
     print(csvnodes_cleared)
     for row in csvnodes_cleared:
-        dict_csvnode = {'node_name': row[0], 'alert': row[1], 'time': datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f")}
+        dict_csvnode = {'node_name': row[0], 'alert': bool(row[1]), 'time': datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f")}
         list_nodes.append(dict_csvnode)
     for row in nodes:
         result = next((x for x in list_nodes if x['node_name'] == row), None)
@@ -106,6 +126,7 @@ def state_checker(message, index):
             message.update({'alert': True})
             print(' '.join(["Status Alert:", str(datetime.now() - message.get('time'))]))
             save_to_csv(nodelist, git_file)
+            upload_to_github()
             print(''.join(["Alert message send to Telegram ", sender_tlg(index, True)]))
             return print('Status ' + message.get('node_name') + ' switched to Alert')
         else:
@@ -114,6 +135,7 @@ def state_checker(message, index):
         if message.get('alert') is True:
             message.update({'alert': False})
             save_to_csv(nodelist, git_file)
+            upload_to_github()
             print(''.join(["Alive message send to Telegram ", sender_tlg(index, False)]))
             return print('Status ' + message.get('node_name') + ' switched to OK')
         else:
