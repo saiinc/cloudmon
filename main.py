@@ -14,11 +14,18 @@ TELEGRAM_TOKEN = os.environ['TELEGRAM_TOKEN']
 TLG_CHAT_ID = os.environ['TLG_CHAT_ID']
 PASSPHRASE = os.environ['PASSPHRASE']
 GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
+GITHUB_USERNAME = os.environ['GITHUB_USERNAME']
+REPOSITORY_NAME = os.environ['REPOSITORY_NAME']
 
 app = Flask(__name__)
 g = Github(GITHUB_TOKEN)
-repo = g.get_repo("cloudmon1/cloudmon")
+repo = g.get_repo(GITHUB_USERNAME + '/' + REPOSITORY_NAME)
+#repo = g.get_repo("cloudmon1/cloudmon")
 git_file = 'temp.db'
+
+
+def str2bool(v):
+    return v.lower() in ("true", "yes", "t", "1")
 
 
 def save_to_csv(list_nodes, filename):
@@ -50,7 +57,8 @@ def upload_to_github():
 
 
 def get_nodes():
-    nodes = ('node_test',)
+    test_str = 'node_test, home_test'
+    nodes = tuple(map(str, test_str.split(', ')))
     list_nodes = []
     list_csvnodenames = []
     list_csvnodes = []
@@ -83,12 +91,12 @@ def get_nodes():
             csvnodes_cleared.remove(row)
     print(csvnodes_cleared)
     for row in csvnodes_cleared:
-        dict_csvnode = {'node_name': row[0], 'alert': bool(row[1]), 'time': datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f")}
+        dict_csvnode = {'node_name': row[0], 'alert': str2bool(row[1]), 'time': datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f")}
         list_nodes.append(dict_csvnode)
     for row in nodes:
         result = next((x for x in list_nodes if x['node_name'] == row), None)
         if result is None:
-            dict_node = {'node_name': row, 'alert': False, 'time': datetime.now()}
+            dict_node = {'node_name': row, 'alert': 'False', 'time': datetime.now()}
             list_nodes.append(dict_node)
     print(list_nodes)
     save_to_csv(list_nodes, git_file)
