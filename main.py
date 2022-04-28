@@ -5,6 +5,10 @@ from flask import Flask, request
 from apscheduler.schedulers.background import BackgroundScheduler
 from github import Github
 import csv
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import base64
 
 
 SND_PATH = os.environ['SND_PATH']
@@ -14,14 +18,26 @@ TELEGRAM_TOKEN = os.environ['TELEGRAM_TOKEN']
 TLG_CHAT_ID = os.environ['TLG_CHAT_ID']
 PASSPHRASE = os.environ['PASSPHRASE']
 GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
-GITHUB_USERNAME = os.environ['GITHUB_USERNAME']
-REPOSITORY_NAME = os.environ['REPOSITORY_NAME']
+#GITHUB_USERNAME = os.environ['GITHUB_USERNAME']
+#REPOSITORY_NAME = os.environ['REPOSITORY_NAME']
 
 app = Flask(__name__)
 g = Github(GITHUB_TOKEN)
-repo = g.get_repo(GITHUB_USERNAME + '/' + REPOSITORY_NAME)
-#repo = g.get_repo("cloudmon1/cloudmon")
+#repo = g.get_repo(GITHUB_USERNAME + '/' + REPOSITORY_NAME)
+repo = g.get_repo("cloudmon1/cloudmon")
 git_file = 'temp.db'
+
+password = str.encode(PASSPHRASE)
+salt = os.urandom(16)
+print(salt)
+kdf = PBKDF2HMAC(algorithm=hashes.SHA256(),
+                 length=32,
+                 salt=salt,
+                 iterations=100000,
+                 )
+key = base64.urlsafe_b64encode(kdf.derive(password))
+print(key)
+cipher = Fernet(key)
 
 
 def str2bool(v):
@@ -46,18 +62,20 @@ def upload_to_github():
         else:
             file = file_content
             all_repo_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
-    with open(git_file, 'r') as file:
-        content_to_upload = file.read()
+    with open(git_file, 'rb') as file:
+        content_to_upload = cipher.encrypt(file.read())
     if git_file in all_repo_files:
         contents = repo.get_contents(git_file)
         print(repo.update_file(git_file, "committing files", content_to_upload, contents.sha))
     else:
-        repo.create_file(git_file, "committing files", content_to_upload, branch="master")
+        print(content_to_upload)
+        repo.create_file(git_file, "committing files", str(content_to_upload.decode()), branch="master")
+        #print(repo.update_file(git_file, "committing files", content_to_upload, contents.sha))
         print(git_file + ' CREATED')
 
 
 def get_nodes():
-    nodes_str = 'node_test, home_test, qweqweqwe'
+    nodes_str = 'node_test, home_test'
     nodes = tuple(map(str, nodes_str.split(', ')))
     list_nodes = []
     list_csvnodenames = []
@@ -73,7 +91,8 @@ def get_nodes():
             all_repo_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
     if git_file in all_repo_files:
         content = repo.get_contents(path=git_file)
-        filedb = content.decoded_content
+        print(content.decoded_content)
+        filedb = cipher.decrypt(content.decoded_content)
         f = open(git_file, 'wb')
         f.write(filedb)
         f.close()
