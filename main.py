@@ -5,10 +5,7 @@ from flask import Flask, request
 from apscheduler.schedulers.background import BackgroundScheduler
 from github import Github
 import csv
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
+import zipfile
 
 
 SND_PATH = os.environ['SND_PATH']
@@ -28,16 +25,6 @@ repo = g.get_repo("cloudmon1/cloudmon")
 git_file = 'temp.db'
 
 password = str.encode(PASSPHRASE)
-salt = os.urandom(16)
-print(salt)
-kdf = PBKDF2HMAC(algorithm=hashes.SHA256(),
-                 length=32,
-                 salt=salt,
-                 iterations=100000,
-                 )
-key = base64.urlsafe_b64encode(kdf.derive(password))
-print(key)
-cipher = Fernet(key)
 
 
 def str2bool(v):
@@ -50,6 +37,10 @@ def save_to_csv(list_nodes, filename):
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         for item in list_nodes:
             writer.writerow(item)
+    with zipfile.ZipFile("temp_db.zip", "w") as zf:
+        zf.write(filename)
+
+        zf.setpassword(password)
 
 
 def upload_to_github():
@@ -62,16 +53,18 @@ def upload_to_github():
         else:
             file = file_content
             all_repo_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
-    with open(git_file, 'rb') as file:
-        content_to_upload = cipher.encrypt(file.read())
-    if git_file in all_repo_files:
-        contents = repo.get_contents(git_file)
-        print(repo.update_file(git_file, "committing files", content_to_upload, contents.sha))
+
+    with open("temp_db.zip", 'rb') as file:
+        content_to_upload = file.read()
+    if "temp_db.zip" in all_repo_files:
+        contents = repo.get_contents("temp_db.zip")
+        print('content_to_upload: ' + str(content_to_upload))
+        print('repo.update_file: ' + str(repo.update_file("temp_db.zip", "committing files", content_to_upload, contents.sha)))
     else:
-        print(content_to_upload)
-        repo.create_file(git_file, "committing files", str(content_to_upload.decode()), branch="master")
+        print('content_to_upload: ' + str(content_to_upload))
+        repo.create_file("temp_db.zip", "committing files", str(content_to_upload.decode()), branch="master")
         #print(repo.update_file(git_file, "committing files", content_to_upload, contents.sha))
-        print(git_file + ' CREATED')
+        print("temp_db.zip" + ' CREATED')
 
 
 def get_nodes():
@@ -90,18 +83,22 @@ def get_nodes():
             file = file_content
             all_repo_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
     if git_file in all_repo_files:
-        content = repo.get_contents(path=git_file)
-        print(content.decoded_content)
-        filedb = cipher.decrypt(content.decoded_content)
-        f = open(git_file, 'wb')
+        content = repo.get_contents(path="temp_db.zip")
+        print('decoded_content: ' + str(content.decoded_content))
+        filedb = content.decoded_content
+        f = open("temp_db.zip", 'wb')
         f.write(filedb)
         f.close()
+        with zipfile.ZipFile("temp_db.zip", "r") as zf:
+            info = zf.infolist()
+            print(info)
+            zf.extract(info[0], "", pwd=password)
         with open(git_file, newline='') as csvfile:
             reader = csv.reader(csvfile)
             for row in reader:
                 list_csvnodenames.append(row[0])
                 list_csvnodes.append(row)
-    print(list_csvnodenames)
+    print('list_csvnodenames: ' + str(list_csvnodenames))
     to_delete = list(set(list_csvnodenames) - set(nodes))
     print(to_delete)
     csvnodes_cleared = list(list_csvnodes)
