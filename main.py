@@ -6,8 +6,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from github import Github
 import csv
 import zipfile
+import base64
+import pyminizip
 
 
+#NODELIST = os.environ['NODELIST']
 SND_PATH = os.environ['SND_PATH']
 STATUS_PATH = os.environ['STATUS_PATH']
 LOG_PATH = os.environ['LOG_PATH']
@@ -37,10 +40,7 @@ def save_to_csv(list_nodes, filename):
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         for item in list_nodes:
             writer.writerow(item)
-    with zipfile.ZipFile("temp_db.zip", "w") as zf:
-        zf.write(filename)
-
-        zf.setpassword(password)
+    pyminizip.compress(filename, "", "temp_db.zip", password, 1)
 
 
 def upload_to_github():
@@ -55,7 +55,7 @@ def upload_to_github():
             all_repo_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
 
     with open("temp_db.zip", 'rb') as file:
-        content_to_upload = file.read()
+        content_to_upload = base64.b64encode(file.read())
     if "temp_db.zip" in all_repo_files:
         contents = repo.get_contents("temp_db.zip")
         print('content_to_upload: ' + str(content_to_upload))
@@ -63,12 +63,11 @@ def upload_to_github():
     else:
         print('content_to_upload: ' + str(content_to_upload))
         repo.create_file("temp_db.zip", "committing files", str(content_to_upload.decode()), branch="master")
-        #print(repo.update_file(git_file, "committing files", content_to_upload, contents.sha))
         print("temp_db.zip" + ' CREATED')
 
 
 def get_nodes():
-    nodes_str = 'node_test, home_test'
+    nodes_str = 'node_test, home_test, 123qwe123'
     nodes = tuple(map(str, nodes_str.split(', ')))
     list_nodes = []
     list_csvnodenames = []
@@ -82,10 +81,10 @@ def get_nodes():
         else:
             file = file_content
             all_repo_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
-    if git_file in all_repo_files:
+    if "temp_db.zip" in all_repo_files:
         content = repo.get_contents(path="temp_db.zip")
-        print('decoded_content: ' + str(content.decoded_content))
-        filedb = content.decoded_content
+        filedb = base64.b64decode(content.decoded_content)
+        print('decoded_content: ' + str(filedb))
         f = open("temp_db.zip", 'wb')
         f.write(filedb)
         f.close()
@@ -100,21 +99,21 @@ def get_nodes():
                 list_csvnodes.append(row)
     print('list_csvnodenames: ' + str(list_csvnodenames))
     to_delete = list(set(list_csvnodenames) - set(nodes))
-    print(to_delete)
+    print('to_delete: ' + str(to_delete))
     csvnodes_cleared = list(list_csvnodes)
     for row in list_csvnodes:
         if row[0] in to_delete:
             csvnodes_cleared.remove(row)
-    print(csvnodes_cleared)
+    print('csvnodes_cleared: ' + str(csvnodes_cleared))
     for row in csvnodes_cleared:
         dict_csvnode = {'node_name': row[0], 'alert': str2bool(row[1]), 'time': datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f")}
         list_nodes.append(dict_csvnode)
     to_add = list(set(nodes) - set(list_csvnodenames))
-    print(to_add)
+    print('to_add: ' + str(to_add))
     for row in to_add:
         dict_node = {'node_name': row, 'alert': 'False', 'time': datetime.now()}
         list_nodes.append(dict_node)
-    print(list_nodes)
+    print('final list_nodes: ' + str(list_nodes))
     if to_delete or to_add:
         save_to_csv(list_nodes, git_file)
         upload_to_github()

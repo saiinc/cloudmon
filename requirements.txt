@@ -3,3 +3,4 @@ APScheduler~=3.9.1
 requests~=2.22.0
 
 PyGithub~=1.55
+pyminizip~=0.2.6
