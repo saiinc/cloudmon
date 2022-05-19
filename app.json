@@ -1,0 +1,16 @@
+{
+  "name": "Cloud monitoring service",
+  "description": "Cloud monitoring service for home pc monitoring",
+  "repository": "https://github.com/saiinc/cloudmon",
+  "addons": [
+    {
+      "plan": "heroku-postgresql:hobby-dev"
+    }
+  ],
+  "env": {
+     "SND_PATH": {
+      "description": "Path to send messages.",
+      "value": "/send"
+    }
+  }
+}
