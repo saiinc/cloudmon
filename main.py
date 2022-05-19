@@ -3,6 +3,10 @@ from datetime import datetime, timedelta
 import requests
 from flask import Flask, request
 from apscheduler.schedulers.background import BackgroundScheduler
+import psycopg2
+from psycopg2 import OperationalError
+from psycopg2 import Error
+
 from github import Github
 import csv
 import zipfile
@@ -10,6 +14,7 @@ import base64
 import pyminizip
 
 
+DATABASE_URL = os.environ['DATABASE_URL']
 #NODELIST = os.environ['NODELIST']
 SND_PATH = os.environ['SND_PATH']
 STATUS_PATH = os.environ['STATUS_PATH']
@@ -21,13 +26,66 @@ GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
 #GITHUB_USERNAME = os.environ['GITHUB_USERNAME']
 #REPOSITORY_NAME = os.environ['REPOSITORY_NAME']
 
+
+try:
+    # Подключиться к существующей базе данных
+    psycopg2.connect(DATABASE_URL)
+    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
+
+    # Создайте курсор для выполнения операций с базой данных
+    cursor = connection.cursor()
+    # SQL-запрос для создания новой таблицы
+    create_table_query = '''CREATE TABLE nodelist
+                          (node_name     TEXT                NOT NULL,
+                          state         BOOLEAN             NOT NULL,
+                          time          TIMESTAMP           NOT NULL); '''
+    # Выполнение команды: это создает новую таблицу
+    cursor.execute(create_table_query)
+    connection.commit()
+    print("Таблица успешно создана в PostgreSQL")
+
+except (Exception, Error) as error:
+    print("Ошибка при работе с PostgreSQL", error)
+finally:
+    if connection:
+        cursor.close()
+        connection.close()
+        print("Соединение с PostgreSQL закрыто")
+
+
 app = Flask(__name__)
+psycopg2.connect(DATABASE_URL)
+connection = psycopg2.connect(DATABASE_URL, sslmode='require')
 g = Github(GITHUB_TOKEN)
 #repo = g.get_repo(GITHUB_USERNAME + '/' + REPOSITORY_NAME)
 repo = g.get_repo("cloudmon1/cloudmon")
 git_file = 'temp.db'
 
 password = str.encode(PASSPHRASE)
+
+
+def execute_query(connection_db, query):
+    cursor = connection_db.cursor()
+    try:
+        cursor.execute(query)
+        connection_db.commit()
+        dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', result: success')
+        print("Query executed successfully")
+    except OperationalError as e:
+        dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', error: ' + str(e))
+        print(f"The error '{e}' occurred")
+
+
+def execute_read_query(connection_db, query):
+    cursor = connection_db.cursor()
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', result: success')
+        return result
+    except OperationalError as e:
+        dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', error: ' + str(e))
+        print(f"The error '{e}' occurred")
 
 
 def str2bool(v):
@@ -69,54 +127,40 @@ def upload_to_github():
 def get_nodes():
     nodes_str = 'node_test, home_test, 123qwe123'
     nodes = tuple(map(str, nodes_str.split(', ')))
+    db_nodes = execute_read_query(connection, "SELECT node_name, state, time "
+                                              "FROM nodelist")
     list_nodes = []
-    list_csvnodenames = []
-    list_csvnodes = []
-    all_repo_files = []
-    contents = repo.get_contents("")
-    while contents:
-        file_content = contents.pop(0)
-        if file_content.type == "dir":
-            contents.extend(repo.get_contents(file_content.path))
-        else:
-            file = file_content
-            all_repo_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
-    if "temp_db.zip" in all_repo_files:
-        content = repo.get_contents(path="temp_db.zip")
-        filedb = base64.b64decode(content.decoded_content)
-        print('decoded_content: ' + str(filedb))
-        f = open("temp_db.zip", 'wb')
-        f.write(filedb)
-        f.close()
-        with zipfile.ZipFile("temp_db.zip", "r") as zf:
-            info = zf.infolist()
-            print(info)
-            zf.extract(info[0], "", pwd=password)
-        with open(git_file, newline='') as csvfile:
-            reader = csv.reader(csvfile)
-            for row in reader:
-                list_csvnodenames.append(row[0])
-                list_csvnodes.append(row)
-    print('list_csvnodenames: ' + str(list_csvnodenames))
-    to_delete = list(set(list_csvnodenames) - set(nodes))
+    list_dbnodenames = []
+    list_dbnodes = []
+    for row in db_nodes:
+        list_dbnodenames.append(row[0])
+        list_dbnodes.append(row)
+    print('list_dbnodenames: ' + str(list_dbnodenames))
+    to_delete = list(set(list_dbnodenames) - set(nodes))
     print('to_delete: ' + str(to_delete))
-    csvnodes_cleared = list(list_csvnodes)
-    for row in list_csvnodes:
+    dbnodes_cleared = list(list_dbnodes)
+    for row in list_dbnodes:
         if row[0] in to_delete:
-            csvnodes_cleared.remove(row)
-    print('csvnodes_cleared: ' + str(csvnodes_cleared))
-    for row in csvnodes_cleared:
-        dict_csvnode = {'node_name': row[0], 'alert': str2bool(row[1]), 'time': datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f")}
-        list_nodes.append(dict_csvnode)
-    to_add = list(set(nodes) - set(list_csvnodenames))
+            dbnodes_cleared.remove(row)
+    print('dbnodes_cleared: ' + str(dbnodes_cleared))
+    for row in dbnodes_cleared:
+        dict_dbnode = {'node_name': row[0], 'alert': row[1], 'time': row[2]}
+        list_nodes.append(dict_dbnode)
+    to_add = list(set(nodes) - set(list_dbnodenames))
     print('to_add: ' + str(to_add))
+    db_to_add = []
     for row in to_add:
-        dict_node = {'node_name': row, 'alert': 'False', 'time': datetime.now()}
+        dict_node = {'node_name': row, 'alert': False, 'time': datetime.now()}
         list_nodes.append(dict_node)
+        list_node = [row, False, datetime.now()]
+        db_to_add.append(list_node)
     print('final list_nodes: ' + str(list_nodes))
-    if to_delete or to_add:
-        save_to_csv(list_nodes, git_file)
-        upload_to_github()
+    if to_add:
+        cursor = connection.cursor()
+        for row in db_to_add:
+            cursor.execute("INSERT INTO nodelist (node_name, state, time) VALUES (%s, %s, %s)", (row[0], row[1], row[2]))
+        connection.commit()
+    #if to_delete:
     return list_nodes
 
 
