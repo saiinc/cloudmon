@@ -24,7 +24,7 @@ cursor = connection.cursor()
 try:
     # SQL-запрос для создания новой таблицы
     create_table_query = '''CREATE TABLE nodelist
-                          (node_name     TEXT                NOT NULL,
+                          (node_name     TEXT                NOT NULL   UNIQUE,
                           state         BOOLEAN             NOT NULL,
                           time          TIMESTAMP           NOT NULL); '''
     # Выполнение команды: это создает новую таблицу
@@ -58,6 +58,11 @@ def execute_query(connection_db, query):
     except OperationalError as e:
         dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', error: ' + str(e))
         print(f"The error '{e}' occurred")
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+            print("Соединение с PostgreSQL закрыто")
 
 
 def execute_read_query(connection_db, query):
@@ -73,7 +78,7 @@ def execute_read_query(connection_db, query):
 
 
 def get_nodes():
-    nodes_str = 'node_test, home_test, 123qwe123'
+    nodes_str = 'node_test, home_test'
     nodes = tuple(map(str, nodes_str.split(', ')))
     db_nodes = execute_read_query(connection, "SELECT node_name, state, time "
                                               "FROM nodelist")
@@ -105,7 +110,11 @@ def get_nodes():
             list_nodes.append(dict_node)
         connection.commit()
     print('final list_nodes: ' + str(list_nodes))
-    # if to_delete:
+    if to_delete:
+        cursor = connection.cursor()
+        for row in to_delete:
+            cursor.execute("DELETE FROM nodelist WHERE node_name = %s", (row,))
+        connection.commit()
     return list_nodes
 
 
