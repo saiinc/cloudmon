@@ -11,6 +11,26 @@
      "SND_PATH": {
       "description": "Path to send messages.",
       "value": "/send"
+    },
+      "STATUS_PATH": {
+      "description": "Path to view current status.",
+      "value": "/status"
+    },
+      "LOG_PATH": {
+      "description": "Path to view log.",
+      "value": "/log"
+    },
+      "TELEGRAM_TOKEN": {
+      "description": "Telegram bot token.",
+      "value": ""
+    },
+      "TLG_CHAT_ID": {
+      "description": "Telegram chat with bot id.",
+      "value": ""
+    },
+      "PASSPHRASE": {
+      "description": "Password for nodes.",
+      "value": ""
     }
   }
 }
