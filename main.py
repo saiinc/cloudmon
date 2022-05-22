@@ -48,21 +48,16 @@ git_file = 'temp.db'
 password = str.encode(PASSPHRASE)
 
 
-def execute_query(connection_db, query):
+def execute_query(connection_db, query, params):
     cursor = connection_db.cursor()
     try:
-        cursor.execute(query)
+        cursor.execute(query, params)
         connection_db.commit()
         dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', result: success')
         print("Query executed successfully")
     except OperationalError as e:
         dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', error: ' + str(e))
         print(f"The error '{e}' occurred")
-    finally:
-        if connection:
-            cursor.close()
-            connection.close()
-            print("Соединение с PostgreSQL закрыто")
 
 
 def execute_read_query(connection_db, query):
@@ -140,8 +135,8 @@ def state_checker(message, index):
         if message.get('alert') is False:
             message.update({'alert': True})
             print(' '.join(["Status Alert:", str(datetime.now() - message.get('time'))]))
-            # save_to_csv(nodelist, git_file)
-            # upload_to_github()
+            execute_query(connection, "UPDATE nodelist SET state = %s, time = %s WHERE node_name = %s",
+                          (message.get('alert'), message.get('time'), message.get('node_name')))
             print(''.join(["Alert message send to Telegram ", sender_tlg(index, True)]))
             return print('Status ' + message.get('node_name') + ' switched to Alert')
         else:
@@ -150,8 +145,8 @@ def state_checker(message, index):
     else:
         if message.get('alert') is True:
             message.update({'alert': False})
-            # save_to_csv(nodelist, git_file)
-            # upload_to_github()
+            execute_query(connection, "UPDATE nodelist SET state = %s, time = %s WHERE node_name = %s",
+                          (message.get('alert'), message.get('time'), message.get('node_name')))
             print(''.join(["Alive message send to Telegram ", sender_tlg(index, False)]))
             return print('Status ' + message.get('node_name') + ' switched to OK')
         else:
