@@ -8,17 +8,17 @@
     }
   ],
   "env": {
+     "NODELIST": {
+      "description": "The list of your devaices fo monitoring. Split symbol is ';'. Duplicates names are not allowed.",
+      "value": "my_home_pc"
+    },
+     "PASSPHRASE": {
+      "description": "The password for nodes. You can use uuid (http://www.uuid.online/) as the password online generation",
+      "value": ""
+    },
      "SND_PATH": {
       "description": "Path to send messages.",
       "value": "/send"
-    },
-      "STATUS_PATH": {
-      "description": "Path to view current status.",
-      "value": "/status"
-    },
-      "LOG_PATH": {
-      "description": "Path to view log.",
-      "value": "/log"
     },
       "TELEGRAM_TOKEN": {
       "description": "Telegram bot token.",
@@ -26,10 +26,6 @@
     },
       "TLG_CHAT_ID": {
       "description": "Telegram chat with bot id.",
-      "value": ""
-    },
-      "PASSPHRASE": {
-      "description": "Password for nodes.",
       "value": ""
     }
   }
