@@ -8,43 +8,33 @@ from psycopg2 import OperationalError
 from psycopg2 import Error
 
 DATABASE_URL = os.environ['DATABASE_URL']
-# NODELIST = os.environ['NODELIST']
+NODELIST = os.environ['NODELIST']
+PASSPHRASE = os.environ['PASSPHRASE']
 SND_PATH = os.environ['SND_PATH']
-STATUS_PATH = os.environ['STATUS_PATH']
-LOG_PATH = os.environ['LOG_PATH']
 TELEGRAM_TOKEN = os.environ['TELEGRAM_TOKEN']
 TLG_CHAT_ID = os.environ['TLG_CHAT_ID']
-PASSPHRASE = os.environ['PASSPHRASE']
 
-# Подключиться к существующей базе данных
 psycopg2.connect(DATABASE_URL)
 connection = psycopg2.connect(DATABASE_URL, sslmode='require')
-# Создайте курсор для выполнения операций с базой данных
 cursor = connection.cursor()
 try:
-    # SQL-запрос для создания новой таблицы
     create_table_query = '''CREATE TABLE nodelist
                           (node_name     TEXT                NOT NULL   UNIQUE,
                           state         BOOLEAN             NOT NULL,
                           time          TIMESTAMP           NOT NULL); '''
-    # Выполнение команды: это создает новую таблицу
     cursor.execute(create_table_query)
     connection.commit()
-    print("Таблица успешно создана в PostgreSQL")
+    print("PostgreSQL table created successfully")
 
 except (Exception, Error) as error:
-    print("Ошибка при работе с PostgreSQL", error)
+    print("Error create table", error)
 finally:
     if connection:
         cursor.close()
         connection.close()
-        print("Соединение с PostgreSQL закрыто")
+        print("Close connection to PostgreSQL")
 
 app = Flask(__name__)
-psycopg2.connect(DATABASE_URL)
-connection = psycopg2.connect(DATABASE_URL, sslmode='require')
-git_file = 'temp.db'
-
 password = str.encode(PASSPHRASE)
 
 
@@ -53,10 +43,9 @@ def execute_query(connection_db, query, params):
     try:
         cursor.execute(query, params)
         connection_db.commit()
-        dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', result: success')
-        print("Query executed successfully")
+        print("Query '%s' executed successfully", query)
     except OperationalError as e:
-        dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', error: ' + str(e))
+        print(query)
         print(f"The error '{e}' occurred")
 
 
@@ -65,16 +54,19 @@ def execute_read_query(connection_db, query):
     try:
         cursor.execute(query)
         result = cursor.fetchall()
-        dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', result: success')
+        print("Query '%s' executed successfully", query)
         return result
     except OperationalError as e:
-        dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + query + ', error: ' + str(e))
+        print(query)
         print(f"The error '{e}' occurred")
 
 
 def get_nodes():
-    nodes_str = 'node_test, home_test'
-    nodes = tuple(map(str, nodes_str.split(', ')))
+    nodes_str = 'node_test;home_test'
+    nodes = tuple(map(str, nodes_str.split(';')))
+    setnodes = set(nodes)
+    if len(nodes) != len(setnodes):
+        raise Exception("Nodes have a duplicates")
     db_nodes = execute_read_query(connection, "SELECT node_name, state, time "
                                               "FROM nodelist")
     list_nodes = []
@@ -113,7 +105,6 @@ def get_nodes():
     return list_nodes
 
 
-dblog = []
 nodelist = get_nodes()
 
 
@@ -124,10 +115,7 @@ def worker():
             state_checker(item, item_index)
             item_index = item_index + 1
     except Exception as ex:
-        dblog.append(datetime.now().strftime('%Y/%m/%d %H:%M:%S') + ' ' + str(ex))
-        requests.post("https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage",
-                      data={"chat_id": TLG_CHAT_ID,
-                            "text": " Проблема в главном цикле! " + str(ex)})
+        print("Problem in main cycle: %s", ex)
 
 
 def state_checker(message, index):
@@ -158,11 +146,11 @@ def state_checker(message, index):
 def sender_tlg(number, state):
     if state:
         response = requests.post("https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage",
-                                 data={"chat_id": TLG_CHAT_ID, "text": nodelist[number]['node_name'] + " замолчал!"})
+                                 data={"chat_id": TLG_CHAT_ID, "text": nodelist[number]['node_name'] + " is ALERT!"})
         return ''.join(["(response: ", str(response.status_code), ')'])
     else:
         response = requests.post("https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage",
-                                 data={"chat_id": TLG_CHAT_ID, "text": nodelist[number]['node_name'] + " ожил!"})
+                                 data={"chat_id": TLG_CHAT_ID, "text": nodelist[number]['node_name'] + " is OK!"})
         return ''.join(["(response: ", str(response.status_code), ')'])
 
 
@@ -174,23 +162,6 @@ scheduler.start()
 @app.route("/")
 def hello():
     return "Hello, World!"
-
-
-@app.route(STATUS_PATH)
-def status():
-    msg_time = nodelist[0]['time']
-    return {
-        'alert': nodelist[0]['alert'],
-        'time_now': datetime.now().strftime('%Y/%m/%d %H:%M:%S'),
-        'ok_msg:': nodelist[0]['ok_msg'],
-        'time_msg': msg_time.strftime('%Y/%m/%d %H:%M:%S')
-    }
-
-
-@app.route(LOG_PATH)
-def logs():
-    logpage = '<br>'.join(dblog)
-    return logpage
 
 
 @app.route(SND_PATH, methods=['POST'])
