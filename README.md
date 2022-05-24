@@ -20,7 +20,7 @@ To keep the service running all the time, add a bank card on the billing page of
 
 1.1 Register a new Telegram Bot: send "/newbot" to @BotFather and follow the instructions. The token provided by @BotFather in the final step will be needed for configuring TELEGRAM_TOKEN environment variable.
 
-1.2 Obtain chat ID of the user the bot should send messages to.
+1.2 Obtain chat ID of the user the bot should send messages to. <br />
 Send "/getid" to "@myidbot" in Telegram messenger. This id should be writen to TLG_CHAT_ID environment variable.
 
 1.3 Send "/start" to the bot, created in step 1. If you skip this step, Telegram bot won't be able to send messages to you.
@@ -32,14 +32,16 @@ Windos computers: open notepad and add this:
 curl -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send-path -d "{\"username\":\"node_name\",\"text\":\"all_ok\",\"password\":\"my-password\"}"
 
 Save file as pinger.cmd
+
 Make new file and add this:
 
-Set WshShell = CreateObject("WScript.Shell")
-WshShell.Run chr(34) & "C:\pinger.cmd" & Chr(34), 0
+Set WshShell = CreateObject("WScript.Shell")<br />
+WshShell.Run chr(34) & "C:\pinger.cmd" & Chr(34), 0<br />
 Set WshShell = Nothing
 
 Save file as pinger.vbs
 
 Open Windows Power Shell and run this:
-$t = New-JobTrigger -Once -At "09/12/2013 1:00:00" -RepetitionInterval (New-TimeSpan -Minutes 1.001) -RepetitionDuration ([TimeSpan]::MaxValue)
-Register-ScheduledJob -Name cloudmon-heroku -FilePath C:\pinger.vbs -Trigger $t
+$trigger = New-JobTrigger -Once -At "09/12/2013 1:00:00" -RepetitionInterval (New-TimeSpan -Minutes 1.001) -RepetitionDuration ([TimeSpan]::MaxValue)<br />
+$action = New-ScheduledTaskAction -Execute 'c:\pinger.vbs' -Argument '-NoProfile -WindowStyle Hidden'<br />
+Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "cloudmon-heroku" -Description "cloudmon-heroku"
