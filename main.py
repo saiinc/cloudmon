@@ -24,7 +24,6 @@ try:
     cursor.execute(create_table_query)
     connection.commit()
     print("PostgreSQL table created successfully")
-
 except (Exception, Error) as error:
     print("Error create table", error)
 finally:
@@ -98,19 +97,37 @@ def get_nodes():
     to_add = list(set(nodes) - set(list_dbnodenames))
     print('to_add: ' + str(to_add))
     if to_add:
-        cursor = connection.cursor()
-        for row in to_add:
-            cursor.execute("INSERT INTO nodelist (node_name, state, time) VALUES (%s, %s, %s)",
-                           (row, False, datetime.now()))
-            dict_node = {'node_name': row, 'alert': False, 'time': datetime.now()}
-            list_nodes.append(dict_node)
-        connection.commit()
+        connection_db = psycopg2.connect(DATABASE_URL, sslmode='require')
+        cursor = connection_db.cursor()
+        try:
+            for row in to_add:
+                cursor.execute("INSERT INTO nodelist (node_name, state, time) VALUES (%s, %s, %s)",
+                               (row, False, datetime.now()))
+                dict_node = {'node_name': row, 'alert': False, 'time': datetime.now()}
+                list_nodes.append(dict_node)
+            connection_db.commit()
+        except OperationalError as e:
+            print(f"The error '{e}' occurred")
+        finally:
+            if connection_db:
+                cursor.close()
+                connection_db.close()
+                print("Close connection to PostgreSQL")
     print('final list_nodes: ' + str(list_nodes))
     if to_delete:
-        cursor = connection.cursor()
-        for row in to_delete:
-            cursor.execute("DELETE FROM nodelist WHERE node_name = %s", (row,))
-        connection.commit()
+        connection_db = psycopg2.connect(DATABASE_URL, sslmode='require')
+        cursor = connection_db.cursor()
+        try:
+            for row in to_delete:
+                cursor.execute("DELETE FROM nodelist WHERE node_name = %s", (row,))
+            connection_db.commit()
+        except OperationalError as e:
+            print(f"The error '{e}' occurred")
+        finally:
+            if connection_db:
+                cursor.close()
+                connection_db.close()
+                print("Close connection to PostgreSQL")
     return list_nodes
 
 
