@@ -40,4 +40,6 @@ Set WshShell = Nothing
 
 Save file as pinger.vbs
 
-Open Windows Power Shell and run this commands:
+Open Windows Power Shell and run this:
+$t = New-JobTrigger -Once -At "09/12/2013 1:00:00" -RepetitionInterval (New-TimeSpan -Minutes 1.001) -RepetitionDuration ([TimeSpan]::MaxValue)
+Register-ScheduledJob -Name cloudmon-heroku -FilePath C:\pinger.vbs -Trigger $t
