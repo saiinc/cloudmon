@@ -41,7 +41,7 @@ Set WshShell = Nothing
 
 Save file as pinger.vbs
 
-Open Windows Power Shell and run this:
+Open Windows Power Shell and run this:<br />
 $trigger = New-JobTrigger -Once -At "09/12/2013 1:00:00" -RepetitionInterval (New-TimeSpan -Minutes 1.001) -RepetitionDuration ([TimeSpan]::MaxValue)<br />
 $action = New-ScheduledTaskAction -Execute 'c:\pinger.vbs' -Argument '-NoProfile -WindowStyle Hidden'<br />
 Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "cloudmon-heroku" -Description "cloudmon-heroku"
