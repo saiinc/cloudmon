@@ -42,7 +42,7 @@ def execute_query(query, params):
     try:
         cursor.execute(query, params)
         connection_db.commit()
-        print("Query '%s' executed successfully", query)
+        print("Query '%s' executed successfully" % query)
     except OperationalError as e:
         print(query)
         print(f"The error '{e}' occurred")
