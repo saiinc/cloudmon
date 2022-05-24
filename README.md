@@ -25,6 +25,19 @@ Send "/getid" to "@myidbot" in Telegram messenger. This id should be writen to T
 
 1.3 Send "/start" to the bot, created in step 1. If you skip this step, Telegram bot won't be able to send messages to you.
 
-## 2. Configure uoyr nodes
+## 2. Configure your nodes
 
-Windos computers: open notepad.
+Windos computers: open notepad and add this: 
+
+curl -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send-path -d "{\"username\":\"node_name\",\"text\":\"all_ok\",\"password\":\"my-password\"}"
+
+Save file as pinger.cmd
+Make new file and add this:
+
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.Run chr(34) & "C:\pinger.cmd" & Chr(34), 0
+Set WshShell = Nothing
+
+Save file as pinger.vbs
+
+Open Windows Power Shell and run this commands:
