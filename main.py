@@ -14,7 +14,6 @@ SND_PATH = os.environ['SND_PATH']
 TELEGRAM_TOKEN = os.environ['TELEGRAM_TOKEN']
 TLG_CHAT_ID = os.environ['TLG_CHAT_ID']
 
-psycopg2.connect(DATABASE_URL)
 connection = psycopg2.connect(DATABASE_URL, sslmode='require')
 cursor = connection.cursor()
 try:
@@ -38,7 +37,8 @@ app = Flask(__name__)
 password = str.encode(PASSPHRASE)
 
 
-def execute_query(connection_db, query, params):
+def execute_query(query, params):
+    connection_db = psycopg2.connect(DATABASE_URL, sslmode='require')
     cursor = connection_db.cursor()
     try:
         cursor.execute(query, params)
@@ -47,28 +47,37 @@ def execute_query(connection_db, query, params):
     except OperationalError as e:
         print(query)
         print(f"The error '{e}' occurred")
+    finally:
+        if connection_db:
+            cursor.close()
+            connection_db.close()
+            print("Close connection to PostgreSQL")
 
 
-def execute_read_query(connection_db, query):
+def execute_read_query(query):
+    connection_db = psycopg2.connect(DATABASE_URL, sslmode='require')
     cursor = connection_db.cursor()
     try:
         cursor.execute(query)
         result = cursor.fetchall()
-        print("Query '%s' executed successfully", query)
+        print("Query '%s' executed successfully" % query)
         return result
     except OperationalError as e:
         print(query)
         print(f"The error '{e}' occurred")
+    finally:
+        if connection_db:
+            cursor.close()
+            connection_db.close()
+            print("Close connection to PostgreSQL")
 
 
 def get_nodes():
-    nodes_str = 'node_test;home_test'
-    nodes = tuple(map(str, nodes_str.split(';')))
+    nodes = tuple(map(str, NODELIST.split(';')))
     setnodes = set(nodes)
     if len(nodes) != len(setnodes):
         raise Exception("Nodes have a duplicates")
-    db_nodes = execute_read_query(connection, "SELECT node_name, state, time "
-                                              "FROM nodelist")
+    db_nodes = execute_read_query("SELECT node_name, state, time FROM nodelist")
     list_nodes = []
     list_dbnodenames = []
     list_dbnodes = []
@@ -123,7 +132,7 @@ def state_checker(message, index):
         if message.get('alert') is False:
             message.update({'alert': True})
             print(' '.join(["Status Alert:", str(datetime.now() - message.get('time'))]))
-            execute_query(connection, "UPDATE nodelist SET state = %s, time = %s WHERE node_name = %s",
+            execute_query("UPDATE nodelist SET state = %s, time = %s WHERE node_name = %s",
                           (message.get('alert'), message.get('time'), message.get('node_name')))
             print(''.join(["Alert message send to Telegram ", sender_tlg(index, True)]))
             return print('Status ' + message.get('node_name') + ' switched to Alert')
@@ -133,7 +142,7 @@ def state_checker(message, index):
     else:
         if message.get('alert') is True:
             message.update({'alert': False})
-            execute_query(connection, "UPDATE nodelist SET state = %s, time = %s WHERE node_name = %s",
+            execute_query("UPDATE nodelist SET state = %s, time = %s WHERE node_name = %s",
                           (message.get('alert'), message.get('time'), message.get('node_name')))
             print(''.join(["Alive message send to Telegram ", sender_tlg(index, False)]))
             return print('Status ' + message.get('node_name') + ' switched to OK')
