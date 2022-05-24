@@ -27,13 +27,15 @@ Send "/getid" to "@myidbot" in Telegram messenger. This id should be writen to T
 
 ## 2. Configure your nodes
 
-Windos computers: open notepad and add this: 
+You just need to periodically send json messages that contains node name from NODELIST and password from PASSPHRASE heroku env variables to you heroku-app
+
+Windows computers: open notepad and add this: 
 
 curl -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send-path -d "{\"username\":\"node_name\",\"text\":\"all_ok\",\"password\":\"my-password\"}"
 
 Save file as pinger.cmd
 
-Make new file and add this:
+Make a new file and add this:
 
 Set WshShell = CreateObject("WScript.Shell")<br />
 WshShell.Run chr(34) & "C:\pinger.cmd" & Chr(34), 0<br />
@@ -45,3 +47,13 @@ Open Windows Power Shell and run this:<br />
 $trigger = New-JobTrigger -Once -At "09/12/2013 1:00:00" -RepetitionInterval (New-TimeSpan -Minutes 1.001) -RepetitionDuration ([TimeSpan]::MaxValue)<br />
 $action = New-ScheduledTaskAction -Execute 'c:\pinger.vbs' -Argument '-NoProfile -WindowStyle Hidden'<br />
 Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "cloudmon-heroku" -Description "cloudmon-heroku"
+
+
+Linux computers:
+
+Create a file with the following content:<br />
+curl -d '{"username":"node_name","text":"all_ok","password":"my-password"}' -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send<br />
+
+Make file executable.
+
+Create a new cron job with a one-minute run time to run this file.
