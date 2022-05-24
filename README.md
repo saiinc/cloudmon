@@ -31,7 +31,7 @@ You just need to periodically send json messages that contains node name from NO
 
 Windows computers: open notepad and add this: 
 
-curl -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send-path -d "{\"username\":\"node_name\",\"text\":\"all_ok\",\"password\":\"my-password\"}"
+curl -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send-path -d "{\\"username\\":\"node_name\",\"text\":\"all_ok\",\"password\":\"my-password\"}"
 
 Save file as pinger.cmd
 
