@@ -1,5 +1,7 @@
 # Cloudmon
-## Cloud monitoring service for windows/linux computers or devices with linux based os
+## Cron monitoring service for windows/linux computers or devices with linux based os
+
+Integration is now only available with Telegram.
 
 Click the button below to deploy to Heroku
 
