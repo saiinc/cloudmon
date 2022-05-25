@@ -54,7 +54,7 @@ Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "cloudmon-her
 Linux computers:
 
 Create a file with the following content:<br />
-curl -d '{"username":"node_name","text":"all_ok","password":"my-password"}' -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send<br />
+curl -d '{"username":"node_name","text":"all_ok","password":"my-password"}' -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send-path<br />
 
 Make file executable.
 
