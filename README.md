@@ -10,13 +10,13 @@ Click the button below to deploy to Heroku
 
 ## 0. Attention
 
-Deployment requires registration of a heroku account, a email is required when registering a heroku account (otherwise the verification code cannot be brushed out). 
+Deployment requires registration of a heroku account, an email is required when registering a heroku account (otherwise the verification code cannot be brushed out). 
 
 An email address that can receive verification codes normally (@qq.com, @163.com are not acceptable):
 - gmail (Best) 
 - Outlook <https://login.live.com/> here.
 
-To keep the service running all the time, add a bank card on the billing page of your heroku account (money will not be withdrawn, but it add more free dyno hours to your app).
+To keep the service running all the time, add a bank card on the billing page of your heroku account (money will not be withdrawn, but it adds more free dyno hours to your app).
 
 ## 1. Telegram bot setup
 
@@ -31,7 +31,7 @@ Send "/getid" to "@myidbot" in Telegram messenger. This id should be writen to T
 
 You just need to periodically send json messages that contains node name from NODELIST and password from PASSPHRASE heroku env variables to you heroku-app
 
-Windows computers: open notepad and add this: 
+### Windows computers: open notepad and add this: 
 
 curl -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send-path -d "{\\"username\\":\\"node_name\\",\\"text\\":\\"all_ok\\",\\"password\\":\\"my-password\\"}"
 
@@ -51,7 +51,7 @@ $action = New-ScheduledTaskAction -Execute 'c:\pinger.vbs' -Argument '-NoProfile
 Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "cloudmon-heroku" -Description "cloudmon-heroku"
 
 
-Linux computers:
+### Linux computers:
 
 Create a file with the following content:<br />
 curl -d '{"username":"node_name","text":"all_ok","password":"my-password"}' -H "Content-Type: application/json" -X POST https://app-name.herokuapp.com/send-path<br />
