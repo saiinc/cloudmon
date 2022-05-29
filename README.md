@@ -29,7 +29,7 @@ Send "/getid" to "@myidbot" in Telegram messenger. This id should be writen to T
 
 ## 2. Configure your nodes
 
-You just need to periodically send json messages that contains node name from NODELIST and password from PASSPHRASE heroku env variables to you heroku-app
+You just need to periodically send json messages that contains node name from NODELIST and password from PASSPHRASE heroku env variables of your heroku-app
 
 #### Windows computers: 
 
