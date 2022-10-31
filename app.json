@@ -9,11 +9,11 @@
   ],
   "env": {
      "NODELIST": {
-      "description": "The list of your devaices fo monitoring. Split symbol is ';'. Duplicates names are not allowed.",
+      "description": "The list of your devaices fo monitoring. Split symbol is ';' (example: my_home_pc;my_cat_pc). Duplicates names are not allowed.",
       "value": "my_home_pc"
     },
      "PASSPHRASE": {
-      "description": "The password for nodes. You can use uuid (http://www.uuid.online/) as the password online generation",
+      "description": "The password for all nodes. You can use uuid (http://www.uuid.online/) as the password online generation",
       "value": ""
     },
      "SND_PATH": {
