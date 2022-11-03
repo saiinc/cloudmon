@@ -1,0 +1,10 @@
+runtime: python39
+
+env_variables:
+  DATABASE_URL: DATABASE-URL
+  NODELIST: "my_home_pc"
+  PASSPHRASE: "secret"
+  SND_PATH: "/send"
+  TELEGRAM_TOKEN: "123"
+  TLG_CHAT_ID: "123"
+ 
