@@ -29,7 +29,7 @@ Send "/getid" to "@myidbot" in Telegram messenger. This id should be writen to T
 
 ## 2. Configure your nodes
 
-You just need to periodically send json messages that contains node name from NODELIST and password from PASSPHRASE heroku env variables of your heroku-app
+You just need to periodically send json messages that contains node name from NODELIST and password from PASSPHRASE heroku env variables of your heroku-app.
 
 #### Windows computers: 
 
@@ -47,7 +47,7 @@ Set WshShell = Nothing
 
 Save file as pinger.vbs
 
-Open Windows Power Shell and run this:<br />
+Open Windows Power Shell and run:<br />
 $trigger = New-JobTrigger -Once -At "09/12/2013 1:00:00" -RepetitionInterval (New-TimeSpan -Minutes 1.001) -RepetitionDuration ([TimeSpan]::MaxValue)<br />
 $action = New-ScheduledTaskAction -Execute 'c:\pinger.vbs' -Argument '-NoProfile -WindowStyle Hidden'<br />
 Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "cloudmon-heroku" -Description "cloudmon-heroku"
