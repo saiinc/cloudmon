@@ -1,5 +1,5 @@
 # Cloudmon
-## Cron monitoring service for windows/linux computers or devices with linux based os
+## Availability check service for windows/linux computers or devices with linux based os
 
 It is necessary that my computer works 24/7 and when it stops working it's notifies me. Here is a monitoring program to deploy to Heroku. Notifications are currently sent only to the Telegram messenger.
 
